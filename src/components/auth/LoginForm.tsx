@@ -30,12 +30,22 @@ const LoginForm = ({ setIsLoading }: LoginFormProps) => {
         password: formData.password,
       });
 
-      if (error) throw error;
+      if (error) {
+        // Manejo específico de errores comunes
+        if (error.message.includes("Invalid login credentials")) {
+          toast.error("Credenciales incorrectas. Por favor, verifica tu correo y contraseña.");
+        } else if (error.message.includes("Email not confirmed")) {
+          toast.error("Por favor, confirma tu correo electrónico antes de iniciar sesión.");
+        } else {
+          toast.error(`Error al iniciar sesión: ${error.message}`);
+        }
+        throw error;
+      }
 
       toast.success("Inicio de sesión exitoso");
       navigate("/");
     } catch (error) {
-      toast.error("Error al iniciar sesión. Por favor, verifica tus credenciales.");
+      console.error("Error de inicio de sesión:", error);
     } finally {
       setIsLoading(false);
     }
@@ -93,4 +103,3 @@ const LoginForm = ({ setIsLoading }: LoginFormProps) => {
 };
 
 export default LoginForm;
-

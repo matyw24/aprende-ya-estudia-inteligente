@@ -36,12 +36,24 @@ const SignUpForm = ({ setIsLoading }: SignUpFormProps) => {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        // Manejo específico de errores comunes
+        if (error.message.includes("User already registered")) {
+          toast.error("Este correo electrónico ya está registrado. Por favor, usa otro o inicia sesión.");
+        } else if (error.message.includes("Password should be")) {
+          toast.error("La contraseña debe tener al menos 6 caracteres.");
+        } else if (error.message.includes("Email")) {
+          toast.error("Por favor, introduce un correo electrónico válido.");
+        } else {
+          toast.error(`Error al registrarse: ${error.message}`);
+        }
+        throw error;
+      }
 
       toast.success("Registro exitoso. Por favor, verifica tu correo electrónico.");
       navigate("/");
     } catch (error) {
-      toast.error("Error al registrarse. Por favor, inténtalo de nuevo.");
+      console.error("Error de registro:", error);
     } finally {
       setIsLoading(false);
     }
