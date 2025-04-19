@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { 
   Select, 
@@ -10,6 +9,8 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { useUploadedContent } from "@/hooks/useUploadedContent";
+import { toast } from "sonner";
 
 const questionTypes = [
   { id: "multiple", label: "Opción Múltiple" },
@@ -23,6 +24,12 @@ const ExamGenerator = () => {
   const [selectedTypes, setSelectedTypes] = useState<string[]>(["multiple"]);
   const [questionCount, setQuestionCount] = useState(10);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [selectedContentId, setSelectedContentId] = useState<string>("");
+  const { uploadedContents, fetchUploadedContents } = useUploadedContent();
+
+  useEffect(() => {
+    fetchUploadedContents();
+  }, []);
 
   const handleTypeToggle = (typeId: string) => {
     setSelectedTypes(prev => 
@@ -33,6 +40,11 @@ const ExamGenerator = () => {
   };
 
   const handleGenerate = () => {
+    if (!selectedContentId) {
+      toast.error("Por favor selecciona un contenido para generar el examen");
+      return;
+    }
+    
     setIsGenerating(true);
     // Mock API call - navigate to demo exam
     setTimeout(() => {
@@ -47,6 +59,27 @@ const ExamGenerator = () => {
       
       <div className="space-y-6">
         <div className="space-y-2">
+          <Label htmlFor="content">Seleccionar Contenido</Label>
+          <Select value={selectedContentId} onValueChange={setSelectedContentId}>
+            <SelectTrigger id="content">
+              <SelectValue placeholder="Selecciona el contenido para el examen" />
+            </SelectTrigger>
+            <SelectContent>
+              {uploadedContents.map((content) => (
+                <SelectItem key={content.id} value={content.id || ""}>
+                  {content.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {uploadedContents.length === 0 && (
+            <p className="text-sm text-muted-foreground">
+              No hay contenido disponible. Por favor, carga algún contenido primero en la sección "Cargar Contenido".
+            </p>
+          )}
+        </div>
+
+        <div className="space-y-2">
           <Label htmlFor="difficulty">Nivel de Dificultad</Label>
           <Select value={difficulty} onValueChange={setDifficulty}>
             <SelectTrigger id="difficulty">
@@ -59,7 +92,7 @@ const ExamGenerator = () => {
             </SelectContent>
           </Select>
         </div>
-
+        
         <div className="space-y-2">
           <Label>Tipos de Preguntas</Label>
           <div className="grid grid-cols-2 gap-4">
@@ -92,7 +125,7 @@ const ExamGenerator = () => {
         <Button 
           onClick={handleGenerate} 
           className="w-full" 
-          disabled={selectedTypes.length === 0 || isGenerating}
+          disabled={selectedTypes.length === 0 || isGenerating || !selectedContentId}
         >
           {isGenerating ? "Generando..." : "Generar Examen"}
         </Button>

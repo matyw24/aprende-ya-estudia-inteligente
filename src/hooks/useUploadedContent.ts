@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -16,6 +15,23 @@ export const useUploadedContent = () => {
   const [uploadedContents, setUploadedContents] = useState<UploadedContent[]>([]);
   const { user } = useAuth();
 
+  const generateTitle = (content: string, fileName?: string): string => {
+    if (fileName) {
+      // Remove file extension and replace dashes/underscores with spaces
+      return fileName.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ");
+    }
+    
+    // Extract first line or first few words from content
+    const firstLine = content.split('\n')[0].trim();
+    if (firstLine.length > 0) {
+      // Use first line if it's not too long, otherwise first few words
+      return firstLine.length <= 50 ? firstLine : firstLine.substring(0, 47) + "...";
+    }
+    
+    // Fallback to generic title with timestamp
+    return `Contenido del ${new Date().toLocaleDateString('es-ES')}`;
+  };
+
   const saveContent = async (content: string, title: string, fileName?: string) => {
     if (!user) {
       toast.error("Debes iniciar sesión para cargar contenido");
@@ -23,12 +39,14 @@ export const useUploadedContent = () => {
     }
 
     try {
+      const generatedTitle = generateTitle(content, fileName);
+      
       const { data, error } = await supabase
         .from('uploaded_content')
         .insert({
           user_id: user.id,
           content,
-          title: title || "Contenido sin título",
+          title: generatedTitle,
           file_name: fileName
         })
         .select()
