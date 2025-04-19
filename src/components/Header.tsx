@@ -1,7 +1,8 @@
 
-import { Book, BookText, FileText } from "lucide-react";
+import { Book, BookText, FileText, LogIn } from "lucide-react";
 import { Link } from "react-router-dom";
 import MobileMenu from "./MobileMenu";
+import { Button } from "./ui/button";
 
 const Header = () => {
   return (
@@ -24,6 +25,12 @@ const Header = () => {
           <Link to="/resumenes" className="flex items-center gap-2 text-foreground hover:text-primary transition-colors">
             <Book className="h-5 w-5" />
             <span>Resúmenes</span>
+          </Link>
+          <Link to="/auth">
+            <Button variant="outline" className="flex items-center gap-2">
+              <LogIn className="h-5 w-5" />
+              <span>Iniciar Sesión</span>
+            </Button>
           </Link>
         </nav>
 
