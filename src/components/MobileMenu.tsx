@@ -1,11 +1,15 @@
 
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Book, BookText, FileText, X, Menu } from "lucide-react";
+import { Book, BookText, FileText, X, Menu, User as UserIcon, LogOut } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { useAuth } from "@/contexts/AuthContext";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 
 const MobileMenu = () => {
   const [open, setOpen] = useState(false);
+  const { user, signOut } = useAuth();
   
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -25,6 +29,20 @@ const MobileMenu = () => {
               <X className="h-5 w-5" />
             </button>
           </div>
+          
+          {user && (
+            <div className="flex items-center gap-3 pb-4 mb-4 border-b border-border">
+              <Avatar className="h-9 w-9">
+                <AvatarFallback className="bg-primary text-primary-foreground">
+                  {user.email?.charAt(0).toUpperCase() || "U"}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex flex-col">
+                <span className="font-medium">{user.email?.split('@')[0]}</span>
+                <span className="text-xs text-muted-foreground truncate max-w-[180px]">{user.email}</span>
+              </div>
+            </div>
+          )}
           
           <nav className="flex flex-col space-y-5">
             <Link 
@@ -59,6 +77,38 @@ const MobileMenu = () => {
               <BookText className="h-5 w-5" />
               <span>Examen Demo</span>
             </Link>
+            
+            {user ? (
+              <>
+                <Link 
+                  to="/perfil" 
+                  className="flex items-center gap-2 text-foreground hover:text-primary transition-colors py-2"
+                  onClick={() => setOpen(false)}
+                >
+                  <UserIcon className="h-5 w-5" />
+                  <span>Mi Perfil</span>
+                </Link>
+                <button 
+                  className="flex items-center gap-2 text-destructive hover:text-destructive/80 transition-colors py-2 text-left"
+                  onClick={() => {
+                    signOut();
+                    setOpen(false);
+                  }}
+                >
+                  <LogOut className="h-5 w-5" />
+                  <span>Cerrar Sesión</span>
+                </button>
+              </>
+            ) : (
+              <Link 
+                to="/auth" 
+                className="flex items-center gap-2 text-foreground hover:text-primary transition-colors py-2"
+                onClick={() => setOpen(false)}
+              >
+                <UserIcon className="h-5 w-5" />
+                <span>Iniciar Sesión</span>
+              </Link>
+            )}
           </nav>
           
           <div className="mt-auto pt-6 border-t border-border">
