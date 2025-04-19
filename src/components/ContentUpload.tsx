@@ -5,11 +5,14 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { FileText, Link as LinkIcon, File } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const ContentUpload = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [directText, setDirectText] = useState("");
   const [url, setUrl] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -18,10 +21,47 @@ const ContentUpload = () => {
     }
   };
 
-  const handleUpload = () => {
-    // This would be implemented with actual API integration
-    console.log("Would upload:", selectedFile || directText || url);
-    alert("¡Contenido cargado con éxito! (simulado)");
+  const processContent = async (content: string) => {
+    setIsProcessing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('process-content', {
+        body: { content }
+      });
+
+      if (error) throw error;
+
+      toast.success("Contenido procesado exitosamente");
+      // Aquí puedes navegar a la página de resumen con el contenido procesado
+      console.log('Contenido procesado:', data);
+
+    } catch (error) {
+      console.error('Error al procesar:', error);
+      toast.error("Error al procesar el contenido");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleUpload = async () => {
+    if (selectedFile) {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const text = e.target?.result as string;
+        await processContent(text);
+      };
+      reader.readAsText(selectedFile);
+    } else if (directText) {
+      await processContent(directText);
+    } else if (url) {
+      try {
+        const response = await fetch(url);
+        const text = await response.text();
+        await processContent(text);
+      } catch (error) {
+        console.error('Error al obtener contenido de URL:', error);
+        toast.error("Error al obtener contenido de la URL");
+      }
+    }
   };
 
   return (
@@ -58,7 +98,7 @@ const ContentUpload = () => {
             )}
             <input
               type="file"
-              accept=".pdf"
+              accept=".pdf,.txt"
               ref={fileInputRef}
               onChange={handleFileChange}
               className="hidden"
@@ -88,8 +128,12 @@ const ContentUpload = () => {
         </TabsContent>
         
         <div className="mt-6">
-          <Button onClick={handleUpload} className="w-full">
-            Procesar Contenido
+          <Button 
+            onClick={handleUpload} 
+            className="w-full"
+            disabled={isProcessing}
+          >
+            {isProcessing ? "Procesando..." : "Procesar Contenido"}
           </Button>
         </div>
       </Tabs>
