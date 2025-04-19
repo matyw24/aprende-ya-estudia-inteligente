@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useUploadedContent } from "@/hooks/useUploadedContent";
 import { Card } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 const ContentUpload = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -74,6 +74,24 @@ const ContentUpload = () => {
       }
     }
   };
+
+  const PreviewDialog = ({ content }: { content: UploadedContent }) => (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button variant="ghost" className="h-8 w-8 p-0">
+          <FileText className="h-4 w-4" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{content.title}</DialogTitle>
+        </DialogHeader>
+        <div className="mt-4 whitespace-pre-wrap font-mono text-sm">
+          {content.content}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
 
   return (
     <div className="w-full max-w-3xl mx-auto">
@@ -152,20 +170,20 @@ const ContentUpload = () => {
       </div>
 
       {uploadedContents.length > 0 && (
-        <div>
+        <div className="mt-8">
           <h3 className="text-xl font-semibold mb-4">Contenidos Cargados</h3>
           <div className="space-y-4">
             {uploadedContents.map((content) => (
-              <Card 
-                key={content.id} 
-                className="p-4 hover:bg-secondary/50 transition-colors cursor-pointer"
-              >
+              <Card key={content.id} className="p-4">
                 <div className="flex justify-between items-center">
-                  <div>
-                    <h4 className="font-medium">{content.file_name || "Contenido sin nombre"}</h4>
+                  <div className="flex-1">
+                    <h4 className="font-medium">{content.title}</h4>
                     <p className="text-sm text-muted-foreground">
                       {new Date(content.created_at || '').toLocaleDateString()}
                     </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <PreviewDialog content={content} />
                   </div>
                 </div>
               </Card>

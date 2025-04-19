@@ -21,14 +21,15 @@ export const useUploadedContent = () => {
       return fileName.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ");
     }
     
-    // Extract first line or first few words from content
-    const firstLine = content.split('\n')[0].trim();
-    if (firstLine.length > 0) {
-      // Use first line if it's not too long, otherwise first few words
-      return firstLine.length <= 50 ? firstLine : firstLine.substring(0, 47) + "...";
+    // Extract meaningful title from content
+    const lines = content.split('\n').filter(line => line.trim().length > 0);
+    if (lines.length > 0) {
+      // Try to find a line that looks like a title (shorter than 100 chars)
+      const potentialTitle = lines.find(line => line.length < 100) || lines[0];
+      return potentialTitle.trim();
     }
     
-    // Fallback to generic title with timestamp
+    // Fallback to date-based title
     return `Contenido del ${new Date().toLocaleDateString('es-ES')}`;
   };
 
@@ -82,9 +83,14 @@ export const useUploadedContent = () => {
     }
   };
 
+  const getContentById = (id: string): UploadedContent | undefined => {
+    return uploadedContents.find(content => content.id === id);
+  };
+
   return { 
     uploadedContents, 
     saveContent, 
-    fetchUploadedContents 
+    fetchUploadedContents,
+    getContentById
   };
 };
