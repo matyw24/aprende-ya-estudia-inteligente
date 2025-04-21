@@ -58,6 +58,8 @@ const ExamGenerator = () => {
         throw new Error("No se pudo encontrar el contenido seleccionado");
       }
       
+      console.log(`Generando examen con dificultad: ${difficulty}, tipos: ${selectedTypes.join(", ")}, cantidad: ${questionCount}`);
+      
       const { data, error } = await supabase.functions.invoke('process-content', {
         body: { 
           content: selectedContent.content,
@@ -70,11 +72,21 @@ const ExamGenerator = () => {
         }
       });
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error al invocar función:", error);
+        throw error;
+      }
+      
+      console.log("Respuesta de la función:", data);
+      
+      if (!data || !data.exam) {
+        throw new Error("No se recibió un examen válido del servidor");
+      }
       
       // Store the generated exam in sessionStorage to retrieve it in the demo page
       sessionStorage.setItem('generatedExam', JSON.stringify(data.exam));
       
+      toast.success("Examen generado exitosamente");
       setIsGenerating(false);
       navigate("/examen-demo");
       
@@ -118,11 +130,18 @@ const ExamGenerator = () => {
               <SelectValue placeholder="Selecciona la dificultad" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="bajo">Bajo</SelectItem>
-              <SelectItem value="medio">Medio</SelectItem>
-              <SelectItem value="alto">Alto</SelectItem>
+              <SelectItem value="bajo">Bajo (Nivel Básico)</SelectItem>
+              <SelectItem value="medio">Medio (Nivel Universitario)</SelectItem>
+              <SelectItem value="alto">Alto (Nivel Avanzado/Doctoral)</SelectItem>
             </SelectContent>
           </Select>
+          <p className="text-sm text-muted-foreground">
+            {difficulty === "alto" 
+              ? "Nivel doctoral con preguntas muy desafiantes y análisis profundo" 
+              : difficulty === "medio" 
+                ? "Nivel universitario con conceptos complejos y razonamiento analítico" 
+                : "Nivel básico con conceptos fundamentales"}
+          </p>
         </div>
         
         <div className="space-y-2">

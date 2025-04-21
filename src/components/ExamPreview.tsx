@@ -12,8 +12,53 @@ const ExamExportButton = ({ title }: { title: string }) => {
   return <ExportPDF title={title} type="exam" />;
 };
 
+// Define proper types for different question formats
+type MultipleChoiceQuestion = {
+  id: number;
+  type: "multiple";
+  text: string;
+  options: string[];
+  correctAnswer: number;
+  explanation: string;
+};
+
+type TrueFalseQuestion = {
+  id: number;
+  type: "truefalse";
+  text: string;
+  correctAnswer: boolean;
+  explanation: string;
+};
+
+type OpenQuestion = {
+  id: number;
+  type: "open";
+  text: string;
+  explanation: string;
+};
+
+type MatchingPair = {
+  item: string;
+  match: string;
+};
+
+type MatchingQuestion = {
+  id: number;
+  type: "matching";
+  text: string;
+  pairs: MatchingPair[];
+  explanation: string;
+};
+
+type Question = MultipleChoiceQuestion | TrueFalseQuestion | OpenQuestion | MatchingQuestion;
+
+type Exam = {
+  title: string;
+  questions: Question[];
+};
+
 // Default mock exam as fallback
-const defaultExam = {
+const defaultExam: Exam = {
   title: "Examen de Muestra",
   questions: [
     {
@@ -40,7 +85,7 @@ const defaultExam = {
 };
 
 const ExamPreview = () => {
-  const [exam, setExam] = useState(defaultExam);
+  const [exam, setExam] = useState<Exam>(defaultExam);
   const [answers, setAnswers] = useState<Record<number, any>>({});
   const [showResults, setShowResults] = useState(false);
   const [shuffledPairs, setShuffledPairs] = useState<string[]>([]);
@@ -57,7 +102,7 @@ const ExamPreview = () => {
         // Initialize shuffled pairs if matching questions exist
         if (parsedExam.questions) {
           const matchingQuestion = parsedExam.questions.find(q => q.type === "matching");
-          if (matchingQuestion) {
+          if (matchingQuestion && 'pairs' in matchingQuestion) {
             setShuffledPairs([...matchingQuestion.pairs].sort(() => Math.random() - 0.5).map(p => p.match));
           }
         }
@@ -174,7 +219,7 @@ const ExamPreview = () => {
                 />
               )}
               
-              {question.type === "matching" && question.pairs && (
+              {question.type === "matching" && 'pairs' in question && (
                 <div className="space-y-4">
                   {question.pairs.map((pair, idx) => (
                     <div key={idx} className="flex flex-col sm:flex-row sm:items-center">

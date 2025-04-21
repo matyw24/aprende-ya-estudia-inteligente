@@ -14,6 +14,7 @@ import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader,
 
 const ContentUpload = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [fileContent, setFileContent] = useState<string>("");
   const [directText, setDirectText] = useState("");
   const [url, setUrl] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -26,26 +27,90 @@ const ContentUpload = () => {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setSelectedFile(e.target.files[0]);
+      const file = e.target.files[0];
+      setSelectedFile(file);
+      
+      // Read file content based on file type
+      if (file.type === 'application/pdf') {
+        readPdfFile(file);
+      } else {
+        readTextFile(file);
+      }
+    }
+  };
+
+  const readTextFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      setFileContent(text);
+    };
+    reader.readAsText(file);
+  };
+
+  const readPdfFile = async (file: File) => {
+    try {
+      setIsProcessing(true);
+      // Create a FormData object and append the file
+      const formData = new FormData();
+      formData.append('pdf', file);
+      
+      // Extract text from PDF using the Supabase function
+      const { data, error } = await supabase.functions.invoke('process-content', {
+        body: { action: "extractPdfText", fileName: file.name }
+      });
+      
+      if (error) throw error;
+      
+      if (data && data.text) {
+        setFileContent(data.text);
+      } else {
+        throw new Error("No se pudo extraer el texto del PDF");
+      }
+    } catch (error) {
+      console.error('Error al procesar PDF:', error);
+      toast.error("Error al procesar el archivo PDF. Intenta con un archivo de texto plano.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const fetchUrlContent = async (urlToFetch: string) => {
+    try {
+      setIsProcessing(true);
+      
+      // Use the Supabase function to fetch the URL content securely
+      const { data, error } = await supabase.functions.invoke('process-content', {
+        body: { action: "fetchUrl", url: urlToFetch }
+      });
+      
+      if (error) throw error;
+      
+      if (data && data.content) {
+        return data.content;
+      } else {
+        throw new Error("No se pudo obtener el contenido de la URL");
+      }
+    } catch (error) {
+      console.error('Error al obtener contenido de URL:', error);
+      toast.error("Error al obtener contenido de la URL");
+      return null;
+    } finally {
+      setIsProcessing(false);
     }
   };
 
   const processContent = async (content: string, fileName?: string) => {
     setIsProcessing(true);
     try {
-      const { data, error } = await supabase.functions.invoke('process-content', {
-        body: { content }
-      });
-
-      if (error) throw error;
-
-      const savedContent = await saveContent(content, fileName || "Contenido importado", fileName);
+      const savedContent = await saveContent(content, "", fileName);
       
       if (savedContent) {
         toast.success("Contenido procesado exitosamente");
         setDirectText("");
         setUrl("");
         setSelectedFile(null);
+        setFileContent("");
       }
     } catch (error) {
       console.error('Error al procesar:', error);
@@ -56,23 +121,14 @@ const ContentUpload = () => {
   };
 
   const handleUpload = async () => {
-    if (selectedFile) {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const text = e.target?.result as string;
-        await processContent(text, selectedFile.name);
-      };
-      reader.readAsText(selectedFile);
+    if (selectedFile && fileContent) {
+      await processContent(fileContent, selectedFile.name);
     } else if (directText) {
       await processContent(directText);
     } else if (url) {
-      try {
-        const response = await fetch(url);
-        const text = await response.text();
-        await processContent(text, url);
-      } catch (error) {
-        console.error('Error al obtener contenido de URL:', error);
-        toast.error("Error al obtener contenido de la URL");
+      const content = await fetchUrlContent(url);
+      if (content) {
+        await processContent(content, url);
       }
     }
   };
@@ -164,6 +220,15 @@ const ContentUpload = () => {
                 className="hidden"
               />
             </div>
+            {fileContent && (
+              <div className="mt-2">
+                <p className="text-sm text-muted-foreground mb-2">Vista previa del contenido:</p>
+                <div className="max-h-[200px] overflow-y-auto bg-muted p-3 rounded text-sm font-mono">
+                  {fileContent.slice(0, 500)}
+                  {fileContent.length > 500 && "..."}
+                </div>
+              </div>
+            )}
           </TabsContent>
           
           <TabsContent value="text" className="space-y-4">
@@ -191,7 +256,7 @@ const ContentUpload = () => {
             <Button 
               onClick={handleUpload} 
               className="w-full"
-              disabled={isProcessing || (!selectedFile && !directText && !url)}
+              disabled={isProcessing || (!fileContent && !directText && !url)}
             >
               {isProcessing ? "Procesando..." : "Procesar Contenido"}
             </Button>
