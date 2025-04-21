@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { 
@@ -11,6 +12,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useUploadedContent } from "@/hooks/useUploadedContent";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 
 const questionTypes = [
   { id: "multiple", label: "Opción Múltiple" },
@@ -25,7 +28,8 @@ const ExamGenerator = () => {
   const [questionCount, setQuestionCount] = useState(10);
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedContentId, setSelectedContentId] = useState<string>("");
-  const { uploadedContents, fetchUploadedContents } = useUploadedContent();
+  const { uploadedContents, fetchUploadedContents, getContentById } = useUploadedContent();
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchUploadedContents();
@@ -39,18 +43,46 @@ const ExamGenerator = () => {
     );
   };
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     if (!selectedContentId) {
       toast.error("Por favor selecciona un contenido para generar el examen");
       return;
     }
     
     setIsGenerating(true);
-    // Mock API call - navigate to demo exam
-    setTimeout(() => {
+    
+    try {
+      const selectedContent = getContentById(selectedContentId);
+      
+      if (!selectedContent) {
+        throw new Error("No se pudo encontrar el contenido seleccionado");
+      }
+      
+      const { data, error } = await supabase.functions.invoke('process-content', {
+        body: { 
+          content: selectedContent.content,
+          action: "generateExam",
+          params: {
+            difficulty,
+            questionTypes: selectedTypes,
+            questionCount
+          }
+        }
+      });
+      
+      if (error) throw error;
+      
+      // Store the generated exam in sessionStorage to retrieve it in the demo page
+      sessionStorage.setItem('generatedExam', JSON.stringify(data.exam));
+      
       setIsGenerating(false);
-      window.location.href = "/examen-demo";
-    }, 2000);
+      navigate("/examen-demo");
+      
+    } catch (error) {
+      console.error('Error al generar examen:', error);
+      toast.error("Error al generar el examen. Inténtalo de nuevo.");
+      setIsGenerating(false);
+    }
   };
 
   return (

@@ -1,19 +1,20 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import ExportPDF from "./ExportPDF";
+import { toast } from "sonner";
 
-const ExamExportButton = () => {
-  return <ExportPDF title="Biología Celular - Examen" type="exam" />;
+const ExamExportButton = ({ title }: { title: string }) => {
+  return <ExportPDF title={title} type="exam" />;
 };
 
-// Mock data for a sample exam
-const mockExam = {
-  title: "Biología Celular - Examen",
+// Default mock exam as fallback
+const defaultExam = {
+  title: "Examen de Muestra",
   questions: [
     {
       id: 1,
@@ -34,40 +35,38 @@ const mockExam = {
       text: "Las mitocondrias son conocidas como 'la central energética' de la célula porque producen ATP.",
       correctAnswer: true,
       explanation: "Las mitocondrias son responsables de la producción de ATP a través del proceso de respiración celular."
-    },
-    {
-      id: 3,
-      type: "open",
-      text: "Explica brevemente el proceso de la fotosíntesis y su importancia para los seres vivos.",
-      keywords: ["luz solar", "clorofila", "CO2", "agua", "glucosa", "oxígeno"],
-      explanation: "La fotosíntesis es el proceso por el cual las plantas, algas y algunas bacterias convierten la energía de la luz solar en energía química. Utilizan clorofila para capturar la luz solar y convierten CO2 y agua en glucosa y oxígeno."
-    },
-    {
-      id: 4,
-      type: "matching",
-      text: "Relaciona cada organelo con su función:",
-      pairs: [
-        { item: "Ribosoma", match: "Síntesis de proteínas" },
-        { item: "Lisosoma", match: "Digestión celular" },
-        { item: "Retículo endoplásmico", match: "Transporte intracelular" },
-        { item: "Núcleo", match: "Almacenamiento de ADN" }
-      ],
-      explanation: "Cada organelo tiene funciones específicas en la célula."
     }
   ]
 };
 
 const ExamPreview = () => {
+  const [exam, setExam] = useState(defaultExam);
   const [answers, setAnswers] = useState<Record<number, any>>({});
   const [showResults, setShowResults] = useState(false);
-  const [shuffledPairs, setShuffledPairs] = useState(() => {
-    // Find the matching question and shuffle its matches
-    const matchingQuestion = mockExam.questions.find(q => q.type === "matching");
-    if (matchingQuestion) {
-      return [...matchingQuestion.pairs].sort(() => Math.random() - 0.5).map(p => p.match);
+  const [shuffledPairs, setShuffledPairs] = useState<string[]>([]);
+
+  useEffect(() => {
+    // Retrieve the generated exam from sessionStorage
+    const storedExam = sessionStorage.getItem('generatedExam');
+    
+    if (storedExam) {
+      try {
+        const parsedExam = JSON.parse(storedExam);
+        setExam(parsedExam);
+        
+        // Initialize shuffled pairs if matching questions exist
+        if (parsedExam.questions) {
+          const matchingQuestion = parsedExam.questions.find(q => q.type === "matching");
+          if (matchingQuestion) {
+            setShuffledPairs([...matchingQuestion.pairs].sort(() => Math.random() - 0.5).map(p => p.match));
+          }
+        }
+      } catch (error) {
+        console.error("Error parsing stored exam:", error);
+        toast.error("Error al cargar el examen generado.");
+      }
     }
-    return [];
-  });
+  }, []);
 
   const handleMultipleChoice = (questionId: number, optionIndex: number) => {
     setAnswers(prev => ({ ...prev, [questionId]: optionIndex }));
@@ -100,10 +99,10 @@ const ExamPreview = () => {
   return (
     <div className="w-full max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-sm border">
       <div className="flex justify-between items-center mb-8">
-        <h2 className="text-2xl font-bold">{mockExam.title}</h2>
+        <h2 className="text-2xl font-bold">{exam.title}</h2>
         {!showResults && (
           <span className="text-muted-foreground">
-            {Object.keys(answers).length} de {mockExam.questions.length} respondidas
+            {Object.keys(answers).length} de {exam.questions.length} respondidas
           </span>
         )}
       </div>
@@ -111,12 +110,12 @@ const ExamPreview = () => {
       {showResults && (
         <div className="mb-8 p-4 bg-accent rounded-lg">
           <h3 className="text-xl font-semibold mb-2">Resultados del Examen</h3>
-          <p className="text-lg">Completaste el examen de muestra. En una implementación real, aquí verías tu puntuación y retroalimentación detallada.</p>
+          <p className="text-lg">Completaste el examen. En una implementación real, aquí verías tu puntuación y retroalimentación detallada.</p>
         </div>
       )}
       
       <div className="space-y-10">
-        {mockExam.questions.map((question) => (
+        {exam.questions.map((question) => (
           <Card key={question.id} className="border shadow-sm">
             <CardContent className="p-6">
               <div className="flex justify-between mb-4">
@@ -175,7 +174,7 @@ const ExamPreview = () => {
                 />
               )}
               
-              {question.type === "matching" && (
+              {question.type === "matching" && question.pairs && (
                 <div className="space-y-4">
                   {question.pairs.map((pair, idx) => (
                     <div key={idx} className="flex flex-col sm:flex-row sm:items-center">
@@ -197,7 +196,7 @@ const ExamPreview = () => {
                 </div>
               )}
               
-              {showResults && (
+              {showResults && question.explanation && (
                 <div className="mt-4 p-3 bg-muted rounded-md">
                   <p className="font-semibold mb-1">Explicación:</p>
                   <p>{question.explanation}</p>
@@ -217,7 +216,7 @@ const ExamPreview = () => {
               Volver al Examen
             </Button>
             <div className="flex-1"></div>
-            <ExamExportButton />
+            <ExamExportButton title={exam.title} />
           </div>
         )}
       </div>

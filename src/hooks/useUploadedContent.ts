@@ -21,11 +21,34 @@ export const useUploadedContent = () => {
       // Remove file extension and replace dashes/underscores with spaces
       return fileName.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ");
     }
+    
+    // Try to find a title in the content (e.g., first heading or first line)
     const lines = content.split('\n').filter(line => line.trim().length > 0);
-    if (lines.length > 0) {
-      const potentialTitle = lines.find(line => line.length < 100) || lines[0];
-      return potentialTitle.trim();
+    
+    // Look for heading patterns (# Title, ## Title, etc.)
+    const headingMatch = content.match(/^#+\s+(.+)$/m);
+    if (headingMatch) {
+      return headingMatch[1].trim();
     }
+    
+    // Look for capitalized segments that might be titles
+    const potentialTitleLine = lines.find(line => 
+      line.length < 100 && 
+      (line.toUpperCase() === line || /^[A-Z][^.!?]*[.!?]$/.test(line))
+    );
+    
+    if (potentialTitleLine) {
+      return potentialTitleLine.trim();
+    }
+    
+    // If we still don't have a title, take the first non-empty line
+    if (lines.length > 0) {
+      const firstLine = lines[0].trim();
+      // Truncate if too long
+      return firstLine.length > 60 ? firstLine.substring(0, 57) + '...' : firstLine;
+    }
+    
+    // Fallback: date-based title
     return `Contenido del ${new Date().toLocaleDateString('es-ES')}`;
   };
 
@@ -36,7 +59,7 @@ export const useUploadedContent = () => {
     }
 
     try {
-      const generatedTitle = generateTitle(content, fileName);
+      const generatedTitle = title || generateTitle(content, fileName);
 
       const { data, error } = await supabase
         .from('uploaded_content')
