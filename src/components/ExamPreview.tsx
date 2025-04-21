@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -7,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import ExportPDF from "./ExportPDF";
 import { toast } from "sonner";
+import { Check, X } from "lucide-react";
 
 const ExamExportButton = ({ title }: { title: string }) => {
   return <ExportPDF title={title} type="exam" />;
@@ -114,31 +114,53 @@ const ExamPreview = () => {
   }, []);
 
   const handleMultipleChoice = (questionId: number, optionIndex: number) => {
-    setAnswers(prev => ({ ...prev, [questionId]: optionIndex }));
+    if (!showResults) {
+      setAnswers(prev => ({ ...prev, [questionId]: optionIndex }));
+    }
   };
 
   const handleTrueFalse = (questionId: number, value: boolean) => {
-    setAnswers(prev => ({ ...prev, [questionId]: value }));
+    if (!showResults) {
+      setAnswers(prev => ({ ...prev, [questionId]: value }));
+    }
   };
 
   const handleOpenAnswer = (questionId: number, text: string) => {
-    setAnswers(prev => ({ ...prev, [questionId]: text }));
+    if (!showResults) {
+      setAnswers(prev => ({ ...prev, [questionId]: text }));
+    }
   };
 
   const handleMatching = (questionId: number, itemIndex: number, matchValue: string) => {
-    const currentMatches = answers[questionId] || {};
-    setAnswers(prev => ({ 
-      ...prev, 
-      [questionId]: { 
-        ...currentMatches, 
-        [itemIndex]: matchValue 
-      } 
-    }));
+    if (!showResults) {
+      const currentMatches = answers[questionId] || {};
+      setAnswers(prev => ({ 
+        ...prev, 
+        [questionId]: { 
+          ...currentMatches, 
+          [itemIndex]: matchValue 
+        } 
+      }));
+    }
   };
 
   const handleSubmit = () => {
     setShowResults(true);
     window.scrollTo(0, 0);
+  };
+
+  const isCorrectAnswer = (question: Question, answer: any): boolean => {
+    if (question.type === "multiple") {
+      return answer === question.correctAnswer;
+    } else if (question.type === "truefalse") {
+      return answer === question.correctAnswer;
+    } else if (question.type === "matching" && 'pairs' in question) {
+      // For matching questions, check if all pairs match correctly
+      const userMatches = answer || {};
+      return question.pairs.every((pair, idx) => userMatches[idx] === pair.match);
+    }
+    // For open questions, we can't automatically determine correctness
+    return false;
   };
 
   return (
@@ -155,7 +177,19 @@ const ExamPreview = () => {
       {showResults && (
         <div className="mb-8 p-4 bg-accent rounded-lg">
           <h3 className="text-xl font-semibold mb-2">Resultados del Examen</h3>
-          <p className="text-lg">Completaste el examen. En una implementación real, aquí verías tu puntuación y retroalimentación detallada.</p>
+          <p className="text-lg">
+            Has completado el examen. Revisa las respuestas correctas e incorrectas a continuación.
+          </p>
+          <div className="mt-4 grid grid-cols-2 gap-4">
+            <div className="flex items-center">
+              <div className="w-4 h-4 rounded-full bg-green-500 mr-2"></div>
+              <span>Respuesta correcta</span>
+            </div>
+            <div className="flex items-center">
+              <div className="w-4 h-4 rounded-full bg-red-500 mr-2"></div>
+              <span>Respuesta incorrecta</span>
+            </div>
+          </div>
         </div>
       )}
       
@@ -182,11 +216,29 @@ const ExamPreview = () => {
                   onValueChange={(value) => handleMultipleChoice(question.id, parseInt(value))}
                   className="space-y-3"
                 >
-                  {question.options.map((option, idx) => (
+                  {question.options?.map((option, idx) => (
                     <div key={idx} className="flex items-center space-x-2">
-                      <RadioGroupItem value={idx.toString()} id={`q${question.id}-option${idx}`} />
-                      <Label htmlFor={`q${question.id}-option${idx}`} className="cursor-pointer">
+                      <RadioGroupItem 
+                        value={idx.toString()} 
+                        id={`q${question.id}-option${idx}`}
+                        disabled={showResults}
+                        className={showResults ? 
+                          (idx === question.correctAnswer ? "border-green-500" : 
+                           (answers[question.id] === idx ? "border-red-500" : "")) : ""}
+                      />
+                      <Label 
+                        htmlFor={`q${question.id}-option${idx}`} 
+                        className={`cursor-pointer ${showResults ? 
+                          (idx === question.correctAnswer ? "text-green-600 font-medium" : 
+                           (answers[question.id] === idx && idx !== question.correctAnswer ? "text-red-600" : "")) : ""}`}
+                      >
                         {option}
+                        {showResults && idx === question.correctAnswer && (
+                          <Check className="inline-block ml-2 h-4 w-4 text-green-500" />
+                        )}
+                        {showResults && answers[question.id] === idx && idx !== question.correctAnswer && (
+                          <X className="inline-block ml-2 h-4 w-4 text-red-500" />
+                        )}
                       </Label>
                     </div>
                   ))}
@@ -200,12 +252,52 @@ const ExamPreview = () => {
                   className="space-y-3"
                 >
                   <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="true" id={`q${question.id}-true`} />
-                    <Label htmlFor={`q${question.id}-true`} className="cursor-pointer">Verdadero</Label>
+                    <RadioGroupItem 
+                      value="true" 
+                      id={`q${question.id}-true`}
+                      disabled={showResults}
+                      className={showResults ? 
+                        (question.correctAnswer === true ? "border-green-500" : 
+                         (answers[question.id] === true ? "border-red-500" : "")) : ""}
+                    />
+                    <Label 
+                      htmlFor={`q${question.id}-true`} 
+                      className={`cursor-pointer ${showResults ? 
+                        (question.correctAnswer === true ? "text-green-600 font-medium" : 
+                         (answers[question.id] === true && question.correctAnswer !== true ? "text-red-600" : "")) : ""}`}
+                    >
+                      Verdadero
+                      {showResults && question.correctAnswer === true && (
+                        <Check className="inline-block ml-2 h-4 w-4 text-green-500" />
+                      )}
+                      {showResults && answers[question.id] === true && question.correctAnswer !== true && (
+                        <X className="inline-block ml-2 h-4 w-4 text-red-500" />
+                      )}
+                    </Label>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="false" id={`q${question.id}-false`} />
-                    <Label htmlFor={`q${question.id}-false`} className="cursor-pointer">Falso</Label>
+                    <RadioGroupItem 
+                      value="false" 
+                      id={`q${question.id}-false`}
+                      disabled={showResults}
+                      className={showResults ? 
+                        (question.correctAnswer === false ? "border-green-500" : 
+                         (answers[question.id] === false ? "border-red-500" : "")) : ""}
+                    />
+                    <Label 
+                      htmlFor={`q${question.id}-false`} 
+                      className={`cursor-pointer ${showResults ? 
+                        (question.correctAnswer === false ? "text-green-600 font-medium" : 
+                         (answers[question.id] === false && question.correctAnswer !== false ? "text-red-600" : "")) : ""}`}
+                    >
+                      Falso
+                      {showResults && question.correctAnswer === false && (
+                        <Check className="inline-block ml-2 h-4 w-4 text-green-500" />
+                      )}
+                      {showResults && answers[question.id] === false && question.correctAnswer !== false && (
+                        <X className="inline-block ml-2 h-4 w-4 text-red-500" />
+                      )}
+                    </Label>
                   </div>
                 </RadioGroup>
               )}
@@ -216,6 +308,7 @@ const ExamPreview = () => {
                   value={answers[question.id] || ""}
                   onChange={(e) => handleOpenAnswer(question.id, e.target.value)}
                   className="min-h-[120px]"
+                  disabled={showResults}
                 />
               )}
               
@@ -225,9 +318,14 @@ const ExamPreview = () => {
                     <div key={idx} className="flex flex-col sm:flex-row sm:items-center">
                       <div className="font-medium min-w-[180px] mb-2 sm:mb-0">{pair.item}</div>
                       <select
-                        className="border rounded px-3 py-2 bg-background"
+                        className={`border rounded px-3 py-2 bg-background ${
+                          showResults ? 
+                            (answers[question.id]?.[idx] === pair.match ? "border-green-500 text-green-600" : 
+                             (answers[question.id]?.[idx] ? "border-red-500 text-red-600" : "")) : ""
+                        }`}
                         value={answers[question.id]?.[idx] || ""}
                         onChange={(e) => handleMatching(question.id, idx, e.target.value)}
+                        disabled={showResults}
                       >
                         <option value="">Seleccionar...</option>
                         {shuffledPairs.map((match, matchIdx) => (
@@ -236,13 +334,32 @@ const ExamPreview = () => {
                           </option>
                         ))}
                       </select>
+                      {showResults && (
+                        <div className="mt-2 sm:mt-0 sm:ml-4">
+                          {answers[question.id]?.[idx] === pair.match ? (
+                            <span className="text-green-600 flex items-center">
+                              <Check className="h-4 w-4 mr-1" /> Correcto
+                            </span>
+                          ) : answers[question.id]?.[idx] ? (
+                            <span className="text-red-600 flex items-center">
+                              <X className="h-4 w-4 mr-1" /> Incorrecto. Respuesta correcta: {pair.match}
+                            </span>
+                          ) : (
+                            <span className="text-amber-600">No respondida. Respuesta correcta: {pair.match}</span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
               )}
               
               {showResults && question.explanation && (
-                <div className="mt-4 p-3 bg-muted rounded-md">
+                <div className={`mt-4 p-3 rounded-md ${
+                  isCorrectAnswer(question, answers[question.id]) 
+                    ? "bg-green-50 border border-green-200" 
+                    : "bg-red-50 border border-red-200"
+                }`}>
                   <p className="font-semibold mb-1">Explicación:</p>
                   <p>{question.explanation}</p>
                 </div>

@@ -7,8 +7,9 @@ import { useUploadedContent } from "@/hooks/useUploadedContent";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Check, X } from "lucide-react";
 
 type QuestionOption = {
   text: string;
@@ -49,6 +50,7 @@ const ExamQuestionGenerator = () => {
   const [specificTopic, setSpecificTopic] = useState("");
   const [selectedOption, setSelectedOption] = useState<number | string | null>(null);
   const [showAnswer, setShowAnswer] = useState(false);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
 
   const { uploadedContents, fetchUploadedContents, getContentById } = useUploadedContent();
 
@@ -65,6 +67,7 @@ const ExamQuestionGenerator = () => {
     setIsGenerating(true);
     setShowAnswer(false);
     setSelectedOption(null);
+    setHasSubmitted(false);
 
     try {
       const selectedContent = getContentById(selectedContentId);
@@ -102,8 +105,25 @@ const ExamQuestionGenerator = () => {
   };
 
   const handleOptionChange = (value: string) => {
-    setSelectedOption(value);
+    if (!hasSubmitted) {
+      setSelectedOption(value);
+    }
+  };
+
+  const handleSubmitAnswer = () => {
+    setHasSubmitted(true);
     setShowAnswer(true);
+  };
+
+  const handleReset = () => {
+    setSelectedOption(null);
+    setShowAnswer(false);
+    setHasSubmitted(false);
+  };
+
+  const handleNewQuestion = () => {
+    handleReset();
+    handleGenerate();
   };
 
   const isCorrect =
@@ -159,50 +179,121 @@ const ExamQuestionGenerator = () => {
         {questionData && (
           <Card className="mt-8">
             <CardContent className="p-6">
-              <div className="mb-2 text-base font-medium">{questionData.text}</div>
+              <div className="mb-4 text-base font-medium">{questionData.text}</div>
+              
               {questionData.type === "multiple" && questionData.options && (
                 <RadioGroup
                   value={selectedOption !== null ? String(selectedOption) : undefined}
                   onValueChange={handleOptionChange}
-                  className="space-y-2"
+                  className="space-y-3"
                 >
                   {questionData.options.map((opt, idx) => (
                     <div key={idx} className="flex items-center space-x-2">
-                      <RadioGroupItem value={String(idx)} id={`option-${idx}`} disabled={showAnswer}/>
-                      <Label htmlFor={`option-${idx}`} className="cursor-pointer">
+                      <RadioGroupItem 
+                        value={String(idx)} 
+                        id={`option-${idx}`} 
+                        disabled={hasSubmitted}
+                        className={hasSubmitted ? 
+                          (Number(idx) === questionData.correctAnswer ? "border-green-500" : 
+                           (selectedOption === String(idx) ? "border-red-500" : "")) : ""}
+                      />
+                      <Label 
+                        htmlFor={`option-${idx}`} 
+                        className={`cursor-pointer ${hasSubmitted ? 
+                          (Number(idx) === questionData.correctAnswer ? "text-green-600 font-medium" : 
+                           (selectedOption === String(idx) && Number(idx) !== questionData.correctAnswer ? "text-red-600" : "")) : ""}`}
+                      >
                         {opt.text}
+                        {hasSubmitted && Number(idx) === questionData.correctAnswer && (
+                          <Check className="inline-block ml-2 h-4 w-4 text-green-500" />
+                        )}
+                        {hasSubmitted && selectedOption === String(idx) && Number(idx) !== questionData.correctAnswer && (
+                          <X className="inline-block ml-2 h-4 w-4 text-red-500" />
+                        )}
                       </Label>
                     </div>
                   ))}
                 </RadioGroup>
               )}
+              
               {questionData.type === "truefalse" && (
                 <RadioGroup
                   value={selectedOption !== null ? String(selectedOption) : undefined}
                   onValueChange={handleOptionChange}
-                  className="space-y-2"
+                  className="space-y-3"
                 >
                   <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="1" id="true" disabled={showAnswer}/>
-                    <Label htmlFor="true" className="cursor-pointer">Verdadero</Label>
+                    <RadioGroupItem 
+                      value="1" 
+                      id="true" 
+                      disabled={hasSubmitted}
+                      className={hasSubmitted ? 
+                        (questionData.correctAnswer === 1 || questionData.correctAnswer === "1" || questionData.correctAnswer === true ? "border-green-500" : 
+                         (selectedOption === "1" ? "border-red-500" : "")) : ""}
+                    />
+                    <Label 
+                      htmlFor="true" 
+                      className={`cursor-pointer ${hasSubmitted ? 
+                        (questionData.correctAnswer === 1 || questionData.correctAnswer === "1" || questionData.correctAnswer === true ? "text-green-600 font-medium" : 
+                         (selectedOption === "1" && questionData.correctAnswer !== 1 && questionData.correctAnswer !== "1" && questionData.correctAnswer !== true ? "text-red-600" : "")) : ""}`}
+                    >
+                      Verdadero
+                      {hasSubmitted && (questionData.correctAnswer === 1 || questionData.correctAnswer === "1" || questionData.correctAnswer === true) && (
+                        <Check className="inline-block ml-2 h-4 w-4 text-green-500" />
+                      )}
+                      {hasSubmitted && selectedOption === "1" && 
+                        !(questionData.correctAnswer === 1 || questionData.correctAnswer === "1" || questionData.correctAnswer === true) && (
+                        <X className="inline-block ml-2 h-4 w-4 text-red-500" />
+                      )}
+                    </Label>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="0" id="false" disabled={showAnswer}/>
-                    <Label htmlFor="false" className="cursor-pointer">Falso</Label>
+                    <RadioGroupItem 
+                      value="0" 
+                      id="false" 
+                      disabled={hasSubmitted}
+                      className={hasSubmitted ? 
+                        (questionData.correctAnswer === 0 || questionData.correctAnswer === "0" || questionData.correctAnswer === false ? "border-green-500" : 
+                         (selectedOption === "0" ? "border-red-500" : "")) : ""}
+                    />
+                    <Label 
+                      htmlFor="false" 
+                      className={`cursor-pointer ${hasSubmitted ? 
+                        (questionData.correctAnswer === 0 || questionData.correctAnswer === "0" || questionData.correctAnswer === false ? "text-green-600 font-medium" : 
+                         (selectedOption === "0" && questionData.correctAnswer !== 0 && questionData.correctAnswer !== "0" && questionData.correctAnswer !== false ? "text-red-600" : "")) : ""}`}
+                    >
+                      Falso
+                      {hasSubmitted && (questionData.correctAnswer === 0 || questionData.correctAnswer === "0" || questionData.correctAnswer === false) && (
+                        <Check className="inline-block ml-2 h-4 w-4 text-green-500" />
+                      )}
+                      {hasSubmitted && selectedOption === "0" && 
+                        !(questionData.correctAnswer === 0 || questionData.correctAnswer === "0" || questionData.correctAnswer === false) && (
+                        <X className="inline-block ml-2 h-4 w-4 text-red-500" />
+                      )}
+                    </Label>
                   </div>
                 </RadioGroup>
               )}
+              
               {questionData.type === "open" && (
                 <Textarea
-                  disabled
-                  value="Esta pregunta requiere revisión manual de la respuesta."
-                  className="min-h-[60px] mt-2"
+                  placeholder="Esta pregunta requiere revisión manual de la respuesta."
+                  className="min-h-[100px] mt-2"
+                  disabled={hasSubmitted}
                 />
               )}
-
-              {showAnswer && (questionData.type === "multiple" || questionData.type === "truefalse") && (
-                <div className="mt-4 p-3 rounded bg-muted-foreground/10">
-                  <div className="font-semibold mb-1">
+            </CardContent>
+            
+            <CardFooter className="flex flex-col space-y-4 p-6 pt-0">
+              {!hasSubmitted && selectedOption !== null && (
+                <Button onClick={handleSubmitAnswer} className="w-full">
+                  Comprobar Respuesta
+                </Button>
+              )}
+              
+              {showAnswer && (
+                <div className={`mt-4 p-4 rounded-md ${isCorrect ? "bg-green-50 border border-green-200" : "bg-red-50 border border-red-200"}`}>
+                  <div className={`font-semibold mb-2 ${isCorrect ? "text-green-700" : "text-red-700"}`}>
                     {isCorrect ? "¡Correcto! 🎉" : "Incorrecto 😢"}
                   </div>
                   {questionData.explanation && (
@@ -210,7 +301,18 @@ const ExamQuestionGenerator = () => {
                   )}
                 </div>
               )}
-            </CardContent>
+              
+              {hasSubmitted && (
+                <div className="flex gap-4 w-full">
+                  <Button onClick={handleReset} variant="outline" className="flex-1">
+                    Intentar de Nuevo
+                  </Button>
+                  <Button onClick={handleNewQuestion} className="flex-1">
+                    Nueva Pregunta
+                  </Button>
+                </div>
+              )}
+            </CardFooter>
           </Card>
         )}
       </div>
