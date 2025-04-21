@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -20,16 +21,11 @@ export const useUploadedContent = () => {
       // Remove file extension and replace dashes/underscores with spaces
       return fileName.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ");
     }
-    
-    // Extract meaningful title from content
     const lines = content.split('\n').filter(line => line.trim().length > 0);
     if (lines.length > 0) {
-      // Try to find a line that looks like a title (shorter than 100 chars)
       const potentialTitle = lines.find(line => line.length < 100) || lines[0];
       return potentialTitle.trim();
     }
-    
-    // Fallback to date-based title
     return `Contenido del ${new Date().toLocaleDateString('es-ES')}`;
   };
 
@@ -41,7 +37,7 @@ export const useUploadedContent = () => {
 
     try {
       const generatedTitle = generateTitle(content, fileName);
-      
+
       const { data, error } = await supabase
         .from('uploaded_content')
         .insert({
@@ -87,10 +83,29 @@ export const useUploadedContent = () => {
     return uploadedContents.find(content => content.id === id);
   };
 
+  const deleteContent = async (id: string | undefined) => {
+    if (!user || !id) return;
+
+    try {
+      const { error } = await supabase
+        .from('uploaded_content')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      setUploadedContents(prev => prev.filter(c => c.id !== id));
+      toast.success("Contenido eliminado");
+    } catch (error) {
+      console.error('Error al borrar contenido:', error);
+      toast.error("No se pudo eliminar el contenido");
+    }
+  };
+
   return { 
     uploadedContents, 
     saveContent, 
     fetchUploadedContents,
-    getContentById
+    getContentById,
+    deleteContent
   };
 };

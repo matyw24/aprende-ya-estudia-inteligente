@@ -1,14 +1,16 @@
+
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { FileText, Link as LinkIcon, File } from "lucide-react";
+import { FileText, Link as LinkIcon, File, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useUploadedContent } from "@/hooks/useUploadedContent";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from "@/components/ui/alert-dialog";
 
 const ContentUpload = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -16,7 +18,7 @@ const ContentUpload = () => {
   const [url, setUrl] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { saveContent, uploadedContents, fetchUploadedContents } = useUploadedContent();
+  const { saveContent, uploadedContents, fetchUploadedContents, deleteContent } = useUploadedContent();
 
   useEffect(() => {
     fetchUploadedContents();
@@ -75,10 +77,10 @@ const ContentUpload = () => {
     }
   };
 
-  const PreviewDialog = ({ content }: { content: UploadedContent }) => (
+  const PreviewDialog = ({ content }: { content: { title: string; content: string } }) => (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="ghost" className="h-8 w-8 p-0">
+        <Button variant="ghost" className="h-8 w-8 p-0" title="Previsualizar">
           <FileText className="h-4 w-4" />
         </Button>
       </DialogTrigger>
@@ -91,6 +93,34 @@ const ContentUpload = () => {
         </div>
       </DialogContent>
     </Dialog>
+  );
+
+  // Componente para borrar con confirmación
+  const DeleteDialog = ({ id, title }: { id: string | undefined, title: string }) => (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button variant="ghost" className="h-8 w-8 p-0 text-destructive" title="Eliminar">
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>¿Eliminar contenido?</AlertDialogTitle>
+          <AlertDialogDescription>
+            ¿Estás seguro de que deseas eliminar "<span className="font-semibold">{title}</span>"? Esta acción no se puede deshacer.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogAction
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/80"
+            onClick={() => deleteContent(id)}
+          >
+            Eliminar
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 
   return (
@@ -184,6 +214,7 @@ const ContentUpload = () => {
                   </div>
                   <div className="flex items-center gap-2">
                     <PreviewDialog content={content} />
+                    <DeleteDialog id={content.id} title={content.title || "Sin título"} />
                   </div>
                 </div>
               </Card>
