@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -264,13 +265,13 @@ const ExamPreview = () => {
                       htmlFor={`q${question.id}-true`} 
                       className={`cursor-pointer ${showResults ? 
                         (question.correctAnswer === true ? "text-green-600 font-medium" : 
-                         (answers[question.id] === true && question.correctAnswer !== true ? "text-red-600" : "")) : ""}`}
+                         (answers[question.id] === true && !question.correctAnswer ? "text-red-600" : "")) : ""}`}
                     >
                       Verdadero
                       {showResults && question.correctAnswer === true && (
                         <Check className="inline-block ml-2 h-4 w-4 text-green-500" />
                       )}
-                      {showResults && answers[question.id] === true && question.correctAnswer !== true && (
+                      {showResults && answers[question.id] === true && !question.correctAnswer && (
                         <X className="inline-block ml-2 h-4 w-4 text-red-500" />
                       )}
                     </Label>
@@ -288,13 +289,13 @@ const ExamPreview = () => {
                       htmlFor={`q${question.id}-false`} 
                       className={`cursor-pointer ${showResults ? 
                         (question.correctAnswer === false ? "text-green-600 font-medium" : 
-                         (answers[question.id] === false && question.correctAnswer !== false ? "text-red-600" : "")) : ""}`}
+                         (answers[question.id] === false && question.correctAnswer ? "text-red-600" : "")) : ""}`}
                     >
                       Falso
                       {showResults && question.correctAnswer === false && (
                         <Check className="inline-block ml-2 h-4 w-4 text-green-500" />
                       )}
-                      {showResults && answers[question.id] === false && question.correctAnswer !== false && (
+                      {showResults && answers[question.id] === false && question.correctAnswer && (
                         <X className="inline-block ml-2 h-4 w-4 text-red-500" />
                       )}
                     </Label>

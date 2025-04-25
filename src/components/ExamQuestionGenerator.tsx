@@ -19,7 +19,7 @@ type QuestionOption = {
 type QuestionData = {
   text: string;
   options?: QuestionOption[];
-  correctAnswer?: number | string;
+  correctAnswer?: number | string | boolean;
   explanation?: string;
   type: "multiple" | "truefalse" | "open";
 };
@@ -126,6 +126,17 @@ const ExamQuestionGenerator = () => {
     handleGenerate();
   };
 
+  // Utility function to check if an option is the correct answer for true/false questions
+  const isTrueFalseCorrect = (option: string, correctAnswer: number | string | boolean | undefined): boolean => {
+    if (option === "1" && (correctAnswer === 1 || correctAnswer === "1" || correctAnswer === true)) {
+      return true;
+    }
+    if (option === "0" && (correctAnswer === 0 || correctAnswer === "0" || correctAnswer === false)) {
+      return true;
+    }
+    return false;
+  };
+
   const isCorrect =
     questionData &&
     questionData.options &&
@@ -228,21 +239,21 @@ const ExamQuestionGenerator = () => {
                       id="true" 
                       disabled={hasSubmitted}
                       className={hasSubmitted ? 
-                        (questionData.correctAnswer === 1 || questionData.correctAnswer === "1" || questionData.correctAnswer === true ? "border-green-500" : 
+                        (isTrueFalseCorrect("1", questionData.correctAnswer) ? "border-green-500" : 
                          (selectedOption === "1" ? "border-red-500" : "")) : ""}
                     />
                     <Label 
                       htmlFor="true" 
                       className={`cursor-pointer ${hasSubmitted ? 
-                        (questionData.correctAnswer === 1 || questionData.correctAnswer === "1" || questionData.correctAnswer === true ? "text-green-600 font-medium" : 
-                         (selectedOption === "1" && questionData.correctAnswer !== 1 && questionData.correctAnswer !== "1" && questionData.correctAnswer !== true ? "text-red-600" : "")) : ""}`}
+                        (isTrueFalseCorrect("1", questionData.correctAnswer) ? "text-green-600 font-medium" : 
+                         (selectedOption === "1" && !isTrueFalseCorrect("1", questionData.correctAnswer) ? "text-red-600" : "")) : ""}`}
                     >
                       Verdadero
-                      {hasSubmitted && (questionData.correctAnswer === 1 || questionData.correctAnswer === "1" || questionData.correctAnswer === true) && (
+                      {hasSubmitted && isTrueFalseCorrect("1", questionData.correctAnswer) && (
                         <Check className="inline-block ml-2 h-4 w-4 text-green-500" />
                       )}
                       {hasSubmitted && selectedOption === "1" && 
-                        !(questionData.correctAnswer === 1 || questionData.correctAnswer === "1" || questionData.correctAnswer === true) && (
+                        !isTrueFalseCorrect("1", questionData.correctAnswer) && (
                         <X className="inline-block ml-2 h-4 w-4 text-red-500" />
                       )}
                     </Label>
@@ -253,21 +264,21 @@ const ExamQuestionGenerator = () => {
                       id="false" 
                       disabled={hasSubmitted}
                       className={hasSubmitted ? 
-                        (questionData.correctAnswer === 0 || questionData.correctAnswer === "0" || questionData.correctAnswer === false ? "border-green-500" : 
+                        (isTrueFalseCorrect("0", questionData.correctAnswer) ? "border-green-500" : 
                          (selectedOption === "0" ? "border-red-500" : "")) : ""}
                     />
                     <Label 
                       htmlFor="false" 
                       className={`cursor-pointer ${hasSubmitted ? 
-                        (questionData.correctAnswer === 0 || questionData.correctAnswer === "0" || questionData.correctAnswer === false ? "text-green-600 font-medium" : 
-                         (selectedOption === "0" && questionData.correctAnswer !== 0 && questionData.correctAnswer !== "0" && questionData.correctAnswer !== false ? "text-red-600" : "")) : ""}`}
+                        (isTrueFalseCorrect("0", questionData.correctAnswer) ? "text-green-600 font-medium" : 
+                         (selectedOption === "0" && !isTrueFalseCorrect("0", questionData.correctAnswer) ? "text-red-600" : "")) : ""}`}
                     >
                       Falso
-                      {hasSubmitted && (questionData.correctAnswer === 0 || questionData.correctAnswer === "0" || questionData.correctAnswer === false) && (
+                      {hasSubmitted && isTrueFalseCorrect("0", questionData.correctAnswer) && (
                         <Check className="inline-block ml-2 h-4 w-4 text-green-500" />
                       )}
                       {hasSubmitted && selectedOption === "0" && 
-                        !(questionData.correctAnswer === 0 || questionData.correctAnswer === "0" || questionData.correctAnswer === false) && (
+                        !isTrueFalseCorrect("0", questionData.correctAnswer) && (
                         <X className="inline-block ml-2 h-4 w-4 text-red-500" />
                       )}
                     </Label>
